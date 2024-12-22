@@ -4,7 +4,6 @@ import 'package:camera/camera.dart';
 import 'package:capture_identity/src/capture_controller.dart';
 import 'package:capture_identity/src/framing_capture_widget.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 /// CaptureView is a Flutter widget for capturing images using the device's camera.
 /// It provides a user interface with a live camera preview, framing guides,
@@ -174,12 +173,9 @@ class _CaptureViewState extends State<CaptureView> {
                   // Capture an image.
                   XFile file = await controller.takePicture();
 
-                  final compressImageFile =
-                      await compressImage(file, file.path);
-
                   // Crop the captured image.
                   File? croppedImage = await CaptureController.cropImage(
-                    File(compressImageFile!.path),
+                    File(file.path),
                   );
 
                   // Callback to handle the cropped image.
@@ -200,21 +196,5 @@ class _CaptureViewState extends State<CaptureView> {
         ],
       ),
     );
-  }
-
-  Future<File?> compressImage(XFile xFile, String targetPath) async {
-    // Convert XFile to File
-    File file = File(xFile.path);
-
-    var result = await FlutterImageCompress.compressAndGetFile(
-      file.absolute.path,
-      targetPath,
-      quality: 88,
-      rotate: 180,
-    );
-
-    print(file.lengthSync());
-
-    return File(result!.path);
   }
 }
