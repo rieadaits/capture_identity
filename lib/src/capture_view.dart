@@ -1,9 +1,10 @@
 import 'dart:io';
 
 import 'package:camera/camera.dart';
-import 'package:flutter/material.dart';
 import 'package:capture_identity/src/capture_controller.dart';
 import 'package:capture_identity/src/framing_capture_widget.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 /// CaptureView is a Flutter widget for capturing images using the device's camera.
 /// It provides a user interface with a live camera preview, framing guides,
@@ -44,6 +45,7 @@ class CaptureView extends StatefulWidget {
 class _CaptureViewState extends State<CaptureView> {
   late CameraController controller;
   late List<CameraDescription> cameras;
+  bool isControllerInitialized = false;
 
   @override
   void initState() {
@@ -63,7 +65,9 @@ class _CaptureViewState extends State<CaptureView> {
         if (!mounted) {
           return;
         }
-        setState(() {});
+        setState(() {
+          isControllerInitialized = true;
+        });
       });
     });
   }
@@ -98,7 +102,9 @@ class _CaptureViewState extends State<CaptureView> {
         fit: StackFit.expand,
         children: [
           // Live camera preview.
-          CameraPreview(controller),
+          !isControllerInitialized
+              ? const SizedBox()
+              : CameraPreview(controller),
           // Framing guides around the capture area.
           FramingCaptureWidget(
             hideIdWidget: widget.hideIdWidget ?? false,
@@ -168,16 +174,21 @@ class _CaptureViewState extends State<CaptureView> {
                   // Capture an image.
                   XFile file = await controller.takePicture();
 
+                  final compressImageFile =
+                      await compressImage(file, file.path);
+
                   // Crop the captured image.
                   File? croppedImage = await CaptureController.cropImage(
-                    File(file.path),
+                    File(compressImageFile!.path),
                   );
 
                   // Callback to handle the cropped image.
                   widget.fileCallback(croppedImage!);
 
-                  // Close the capture screen and callback to handle the cropped image..
-                  Navigator.pop(context, croppedImage);
+                  // Close the capture screen and callback to handle timporhe cropped image..
+                  if (context.mounted) {
+                    Navigator.pop(context, croppedImage);
+                  }
                 },
                 icon: const Icon(
                   Icons.camera,
@@ -189,5 +200,21 @@ class _CaptureViewState extends State<CaptureView> {
         ],
       ),
     );
+  }
+
+  Future<File?> compressImage(XFile xFile, String targetPath) async {
+    // Convert XFile to File
+    File file = File(xFile.path);
+
+    var result = await FlutterImageCompress.compressAndGetFile(
+      file.absolute.path,
+      targetPath,
+      quality: 88,
+      rotate: 180,
+    );
+
+    print(file.lengthSync());
+
+    return File(result!.path);
   }
 }
